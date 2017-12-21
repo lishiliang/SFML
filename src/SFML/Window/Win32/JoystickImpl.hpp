@@ -34,13 +34,15 @@
 #ifdef _WIN32_WINNT
     #undef _WIN32_WINNT
 #endif
-#define _WIN32_WINDOWS 0x0501
-#define _WIN32_WINNT   0x0501
+#define _WIN32_WINDOWS      0x0501
+#define _WIN32_WINNT        0x0501
+#define DIRECTINPUT_VERSION 0x0800
 #include <SFML/Window/Joystick.hpp>
 #include <SFML/Window/JoystickImpl.hpp>
 #include <SFML/System/String.hpp>
 #include <windows.h>
 #include <mmsystem.h>
+#include <dinput.h>
 
 
 namespace sf
@@ -134,11 +136,26 @@ public:
 private:
 
     ////////////////////////////////////////////////////////////
+    /// \brief Device object enumeration callback function passed to EnumObjects in open
+    ///
+    /// \param deviceObjectInstance Device object instance
+    /// \param userData             User data (pointer to our JoystickImpl object)
+    ///
+    /// \return DIENUM_CONTINUE to continue enumerating objects or DIENUM_STOP to stop
+    ///
+    ////////////////////////////////////////////////////////////
+    static BOOL CALLBACK deviceObjectEnumerationCallback(const DIDEVICEOBJECTINSTANCE* deviceObjectInstance, void* userData);
+
+    ////////////////////////////////////////////////////////////
     // Member data
     ////////////////////////////////////////////////////////////
-    unsigned int             m_index;          ///< Index of the joystick
-    JOYCAPS                  m_caps;           ///< Joystick capabilities
-    Joystick::Identification m_identification; ///< Joystick identification
+    unsigned int             m_index;                          ///< Index of the joystick
+    JOYCAPS                  m_caps;                           ///< Joystick capabilities
+    IDirectInputDevice8W*    m_device;                         ///< DirectInput 8.x device
+    DIDEVCAPS                m_deviceCaps;                     ///< DirectInput device capabilities
+    int                      m_axes[Joystick::AxisCount];      ///< Offsets to the bytes containing the axes states, -1 if not available
+    int                      m_buttons[Joystick::ButtonCount]; ///< Offsets to the bytes containing the button states, -1 if not available
+    Joystick::Identification m_identification;                 ///< Joystick identification
 };
 
 } // namespace priv
