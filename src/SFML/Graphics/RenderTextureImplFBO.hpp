@@ -31,6 +31,7 @@
 #include <SFML/Graphics/RenderTextureImpl.hpp>
 #include <SFML/Window/Context.hpp>
 #include <SFML/Window/GlResource.hpp>
+#include <map>
 
 
 namespace sf
@@ -66,6 +67,12 @@ public:
     ////////////////////////////////////////////////////////////
     static bool isAvailable();
 
+    ////////////////////////////////////////////////////////////
+    /// \brief Unbind the currently bound FBO
+    ///
+    ////////////////////////////////////////////////////////////
+    static void unbind();
+
 private:
 
     ////////////////////////////////////////////////////////////
@@ -80,6 +87,14 @@ private:
     ///
     ////////////////////////////////////////////////////////////
     virtual bool create(unsigned int width, unsigned int height, unsigned int textureId, bool depthBuffer);
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Create an FBO in the current context
+    ///
+    /// \return True if creation has been successful
+    ///
+    ////////////////////////////////////////////////////////////
+    bool createFrameBuffer();
 
     ////////////////////////////////////////////////////////////
     /// \brief Activate or deactivate the render texture for rendering
@@ -102,9 +117,10 @@ private:
     ////////////////////////////////////////////////////////////
     // Member data
     ////////////////////////////////////////////////////////////
-    Context*     m_context;     ///< Needs a separate OpenGL context for not messing up the other ones
-    unsigned int m_frameBuffer; ///< OpenGL frame buffer object
-    unsigned int m_depthBuffer; ///< Optional depth buffer attached to the frame buffer
+    std::map<Uint64, unsigned int> m_frameBuffers; ///< OpenGL frame buffer objects per context
+    Context*                       m_context;      ///< Backup OpenGL context, used when none already exist
+    unsigned int                   m_depthBuffer;  ///< Optional depth buffer attached to the frame buffer
+    unsigned int                   m_textureId;    ///< The ID of the texture to attach to the FBO
 };
 
 } // namespace priv

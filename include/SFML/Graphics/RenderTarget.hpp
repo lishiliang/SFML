@@ -424,6 +424,14 @@ private:
     void applyShader(const Shader* shader);
 
     ////////////////////////////////////////////////////////////
+    /// \brief Setup the OpenGL state for this RenderTarget
+    ///
+    /// \return True if setup was successful, false otherwise
+    ///
+    ////////////////////////////////////////////////////////////
+    bool setupState();
+
+    ////////////////////////////////////////////////////////////
     /// \brief Setup environment for drawing
     ///
     /// \param useVertexCache Are we going to use the vertex cache?
@@ -458,6 +466,7 @@ private:
     {
         enum {VertexCacheSize = 4};
 
+        bool      enable;         ///< Is the cache enabled?
         bool      glStatesSet;    ///< Are our internal GL states set yet?
         bool      viewChanged;    ///< Has the current view changed since last draw?
         BlendMode lastBlendMode;  ///< Cached blending mode
@@ -473,6 +482,7 @@ private:
     View        m_defaultView; ///< Default view
     View        m_view;        ///< Current view
     StatesCache m_cache;       ///< Render states cache
+    Uint64      m_id;          ///< Unique number that identifies the RenderTarget
 };
 
 } // namespace sf
