@@ -1,5 +1,27 @@
 include(CMakeParseArguments)
 
+# set the appropriate standard library on each platform for the given target
+# ex: sfml_set_stdlib(sfml-system)
+function(sfml_set_stdlib target)
+    # for gcc >= 4.0 on Windows, apply the SFML_USE_STATIC_STD_LIBS option if it is enabled
+    if(SFML_OS_WINDOWS AND SFML_COMPILER_GCC AND NOT SFML_GCC_VERSION VERSION_LESS "4")
+        if(SFML_USE_STATIC_STD_LIBS AND NOT SFML_COMPILER_GCC_TDM)
+            target_link_libraries(${target} "-static-libgcc" "-static-libstdc++")
+        elseif(NOT SFML_USE_STATIC_STD_LIBS AND SFML_COMPILER_GCC_TDM)
+            target_link_libraries(${target} "-shared-libgcc" "-shared-libstdc++")
+        endif()
+    endif()
+
+    if (SFML_OS_MACOSX)
+        if (${CMAKE_GENERATOR} MATCHES "Xcode")
+            set_property(TARGET ${target} PROPERTY XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
+        else()
+            target_compile_options(${target} PRIVATE "-stdlib=libc++")
+            target_link_libraries(${target} "-stdlib=libc++")
+        endif()
+    endif()
+endfunction()
+
 # add a new target which is a SFML library
 # ex: sfml_add_library(sfml-graphics
 #                      SOURCES sprite.cpp image.cpp ...
@@ -50,14 +72,8 @@ macro(sfml_add_library target)
     # set the target's folder (for IDEs that support it, e.g. Visual Studio)
     set_target_properties(${target} PROPERTIES FOLDER "SFML")
 
-    # for gcc >= 4.0 on Windows, apply the SFML_USE_STATIC_STD_LIBS option if it is enabled
-    if(SFML_OS_WINDOWS AND SFML_COMPILER_GCC AND NOT SFML_GCC_VERSION VERSION_LESS "4")
-        if(SFML_USE_STATIC_STD_LIBS AND NOT SFML_COMPILER_GCC_TDM)
-            set_target_properties(${target} PROPERTIES LINK_FLAGS "-static-libgcc -static-libstdc++")
-        elseif(NOT SFML_USE_STATIC_STD_LIBS AND SFML_COMPILER_GCC_TDM)
-            set_target_properties(${target} PROPERTIES LINK_FLAGS "-shared-libgcc -shared-libstdc++")
-        endif()
-    endif()
+    # set the target flags to use the appropriate C++ standard library
+    sfml_set_stdlib(${target})
 
     # For Visual Studio on Windows, export debug symbols (PDB files) to lib directory
     if(SFML_GENERATE_PDB)
@@ -151,21 +167,29 @@ endmacro()
 # add a new target which is a SFML example
 # ex: sfml_add_example(ftp
 #                      SOURCES ftp.cpp ...
-#                      DEPENDS sfml-network sfml-system)
+#                      BUNDLE_RESOURCES MainMenu.nib ...    # Files to be added in target but not installed next to the executable
+#                      DEPENDS sfml-network sfml-system
+#                      RESOURCES_DIR resources)             # A directory to install next to the executable and sources
 macro(sfml_add_example target)
 
     # parse the arguments
-    cmake_parse_arguments(THIS "GUI_APP" "" "SOURCES;DEPENDS" ${ARGN})
+    cmake_parse_arguments(THIS "GUI_APP" "RESOURCES_DIR" "SOURCES;BUNDLE_RESOURCES;DEPENDS" ${ARGN})
 
     # set a source group for the source files
     source_group("" FILES ${THIS_SOURCES})
 
+    # check whether resources must be added in target
+    set(target_input ${THIS_SOURCES})
+    if(THIS_BUNDLE_RESOURCES)
+        set(target_input ${target_input} ${THIS_BUNDLE_RESOURCES})
+    endif()
+
     # create the target
     if(THIS_GUI_APP AND SFML_OS_WINDOWS AND NOT DEFINED CMAKE_CONFIGURATION_TYPES AND ${CMAKE_BUILD_TYPE} STREQUAL "Release")
-        add_executable(${target} WIN32 ${THIS_SOURCES})
+        add_executable(${target} WIN32 ${target_input})
         target_link_libraries(${target} sfml-main)
     else()
-        add_executable(${target} ${THIS_SOURCES})
+        add_executable(${target} ${target_input})
     endif()
 
     # set the debug suffix
@@ -174,14 +198,8 @@ macro(sfml_add_example target)
     # set the target's folder (for IDEs that support it, e.g. Visual Studio)
     set_target_properties(${target} PROPERTIES FOLDER "Examples")
 
-    # for gcc >= 4.0 on Windows, apply the SFML_USE_STATIC_STD_LIBS option if it is enabled
-    if(SFML_OS_WINDOWS AND SFML_COMPILER_GCC AND NOT SFML_GCC_VERSION VERSION_LESS "4")
-        if(SFML_USE_STATIC_STD_LIBS AND NOT SFML_COMPILER_GCC_TDM)
-            set_target_properties(${target} PROPERTIES LINK_FLAGS "-static-libgcc -static-libstdc++")
-        elseif(NOT SFML_USE_STATIC_STD_LIBS AND SFML_COMPILER_GCC_TDM)
-            set_target_properties(${target} PROPERTIES LINK_FLAGS "-shared-libgcc -shared-libstdc++")
-        endif()
-    endif()
+    # set the target flags to use the appropriate C++ standard library
+    sfml_set_stdlib(${target})
 
     # link the target to its SFML dependencies
     if(THIS_DEPENDS)
@@ -198,37 +216,16 @@ macro(sfml_add_example target)
             DESTINATION ${INSTALL_MISC_DIR}/examples/${target}
             COMPONENT examples)
 
-    # install the example's resources as well
-    set(EXAMPLE_RESOURCES "${CMAKE_SOURCE_DIR}/examples/${target}/resources")
-    if(EXISTS ${EXAMPLE_RESOURCES})
-        install(DIRECTORY ${EXAMPLE_RESOURCES}
+    if (THIS_RESOURCES_DIR)
+        # install the example's resources as well
+        get_filename_component(THIS_RESOURCES_DIR "${THIS_RESOURCES_DIR}" ABSOLUTE)
+
+        if(NOT EXISTS "${THIS_RESOURCES_DIR}")
+            message(FATAL_ERROR "Given resources directory to install does not exist: ${THIS_RESOURCES_DIR}")
+        endif()
+        install(DIRECTORY ${THIS_RESOURCES_DIR}
                 DESTINATION ${INSTALL_MISC_DIR}/examples/${target}
                 COMPONENT examples)
     endif()
 
 endmacro()
-
-# macro to find packages on the host OS
-# this is the same as in the toolchain file, which is here for Nsight Tegra VS
-# since it won't use the Android toolchain file
-if(CMAKE_VS_PLATFORM_NAME STREQUAL "Tegra-Android")
-    macro(find_host_package)
-        set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
-        set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER)
-        set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER)
-        if(CMAKE_HOST_WIN32)
-            set(WIN32 1)
-            set(UNIX)
-        elseif(CMAKE_HOST_APPLE)
-            set(APPLE 1)
-            set(UNIX)
-        endif()
-        find_package(${ARGN})
-        set(WIN32)
-        set(APPLE)
-        set(UNIX 1)
-        set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY)
-        set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
-        set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
-    endmacro()
-endif()
