@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2017 Laurent Gomila (laurent@sfml-dev.org)
+// Copyright (C) 2007-2018 Laurent Gomila (laurent@sfml-dev.org)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -188,7 +188,7 @@ bool Music::onGetData(SoundStream::Chunk& data)
     // This will trip an "onLoop()" call from the underlying SoundStream,
     // and we can then take action.
     if (getLoop() && (m_loopSpan.length != 0) && (currentOffset <= loopEnd) && (currentOffset + toFill > loopEnd))
-        toFill = loopEnd - currentOffset;
+        toFill = static_cast<std::size_t>(loopEnd - currentOffset);
 
     // Fill the chunk parameters
     data.samples = &m_samples[0];

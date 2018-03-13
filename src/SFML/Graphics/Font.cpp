@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2017 Laurent Gomila (laurent@sfml-dev.org)
+// Copyright (C) 2007-2018 Laurent Gomila (laurent@sfml-dev.org)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -558,7 +558,7 @@ Glyph Font::loadGlyph(Uint32 codePoint, unsigned int characterSize, bool bold, f
             FT_Stroker stroker = static_cast<FT_Stroker>(m_stroker);
 
             FT_Stroker_Set(stroker, static_cast<FT_Fixed>(outlineThickness * static_cast<float>(1 << 6)), FT_STROKER_LINECAP_ROUND, FT_STROKER_LINEJOIN_ROUND, 0);
-            FT_Glyph_Stroke(&glyphDesc, stroker, false);
+            FT_Glyph_Stroke(&glyphDesc, stroker, true);
         }
     }
 
@@ -631,9 +631,9 @@ Glyph Font::loadGlyph(Uint32 codePoint, unsigned int characterSize, bool bold, f
         if (bitmap.pixel_mode == FT_PIXEL_MODE_MONO)
         {
             // Pixels are 1 bit monochrome values
-            for (int y = padding; y < height - padding; ++y)
+            for (unsigned int y = padding; y < height - padding; ++y)
             {
-                for (int x = padding; x < width - padding; ++x)
+                for (unsigned int x = padding; x < width - padding; ++x)
                 {
                     // The color channels remain white, just fill the alpha channel
                     std::size_t index = x + y * width;
@@ -645,9 +645,9 @@ Glyph Font::loadGlyph(Uint32 codePoint, unsigned int characterSize, bool bold, f
         else
         {
             // Pixels are 8 bits gray levels
-            for (int y = padding; y < height - padding; ++y)
+            for (unsigned int y = padding; y < height - padding; ++y)
             {
-                for (int x = padding; x < width - padding; ++x)
+                for (unsigned int x = padding; x < width - padding; ++x)
                 {
                     // The color channels remain white, just fill the alpha channel
                     std::size_t index = x + y * width;

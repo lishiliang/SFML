@@ -72,6 +72,8 @@ set(DRAWABLES_SRC
     ${INCROOT}/Text.hpp
     ${SRCROOT}/VertexArray.cpp
     ${INCROOT}/VertexArray.hpp
+    ${SRCROOT}/VertexBuffer.cpp
+    ${INCROOT}/VertexBuffer.hpp
 )
 source_group("drawables" FILES ${DRAWABLES_SRC})
 
@@ -114,7 +116,7 @@ if(SFML_OPENGL_ES AND SFML_OS_LINUX)
     find_package(GLES REQUIRED)
     include_directories(${EGL_INCLUDE_DIR} ${GLES_INCLUDE_DIR})
 endif()
-if(SFML_OS_ANDROID)
+if(SFML_OS_IOS)
     find_host_package(Freetype REQUIRED)
 else()
     find_package(Freetype REQUIRED)
