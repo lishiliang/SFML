@@ -7,5 +7,4 @@ set(SRC ${SRCROOT}/Sound.cpp)
 # define the sound target
 sfml_add_example(sound
                  SOURCES ${SRC}
-                 DEPENDS sfml-audio sfml-system
-                 RESOURCES_DIR resources)
+                 DEPENDS sfml-audio sfml-system)

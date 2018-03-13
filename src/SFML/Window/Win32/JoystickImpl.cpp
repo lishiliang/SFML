@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2018 Laurent Gomila (laurent@sfml-dev.org)
+// Copyright (C) 2007-2017 Laurent Gomila (laurent@sfml-dev.org)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -39,12 +39,6 @@
 #include <vector>
 
 
-
-////////////////////////////////////////////////////////////
-// DirectInput
-////////////////////////////////////////////////////////////
-
-
 #ifndef DIDFT_OPTIONAL
 #define DIDFT_OPTIONAL 0x80000000
 #endif
@@ -54,22 +48,91 @@ namespace
 {
     namespace guids
     {
-        const GUID IID_IDirectInput8W = {0xbf798031, 0x483a, 0x4da2, {0xaa, 0x99, 0x5d, 0x64, 0xed, 0x36, 0x97, 0x00}};
+        const GUID IID_IDirectInput8W = {0xbf798031,0x483a,0x4da2,{0xaa,0x99,0x5d,0x64,0xed,0x36,0x97,0x00}};
 
-        const GUID GUID_XAxis         = {0xa36d02e0, 0xc9f3, 0x11cf, {0xbf, 0xc7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}};
-        const GUID GUID_YAxis         = {0xa36d02e1, 0xc9f3, 0x11cf, {0xbf, 0xc7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}};
-        const GUID GUID_ZAxis         = {0xa36d02e2, 0xc9f3, 0x11cf, {0xbf, 0xc7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}};
-        const GUID GUID_RzAxis        = {0xa36d02e3, 0xc9f3, 0x11cf, {0xbf, 0xc7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}};
-        const GUID GUID_Slider        = {0xa36d02e4, 0xc9f3, 0x11cf, {0xbf, 0xc7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}};
+        const GUID GUID_XAxis         = {0xa36d02e0,0xc9f3,0x11cf,{0xbf,0xc7,0x44,0x45,0x53,0x54,0x00,0x00}};
+        const GUID GUID_YAxis         = {0xa36d02e1,0xc9f3,0x11cf,{0xbf,0xc7,0x44,0x45,0x53,0x54,0x00,0x00}};
+        const GUID GUID_ZAxis         = {0xa36d02e2,0xc9f3,0x11cf,{0xbf,0xc7,0x44,0x45,0x53,0x54,0x00,0x00}};
+        const GUID GUID_RzAxis        = {0xa36d02e3,0xc9f3,0x11cf,{0xbf,0xc7,0x44,0x45,0x53,0x54,0x00,0x00}};
+        const GUID GUID_Slider        = {0xa36d02e4,0xc9f3,0x11cf,{0xbf,0xc7,0x44,0x45,0x53,0x54,0x00,0x00}};
 
-        const GUID GUID_POV           = {0xa36d02f2, 0xc9f3, 0x11cf, {0xbf, 0xc7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}};
+        const GUID GUID_POV           = {0xa36d02f2,0xc9f3,0x11cf,{0xbf,0xc7,0x44,0x45,0x53,0x54,0x00,0x00}};
 
-        const GUID GUID_RxAxis        = {0xa36d02f4, 0xc9f3, 0x11cf, {0xbf, 0xc7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}};
-        const GUID GUID_RyAxis        = {0xa36d02f5, 0xc9f3, 0x11cf, {0xbf, 0xc7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}};
+        const GUID GUID_RxAxis        = {0xa36d02f4,0xc9f3,0x11cf,{0xbf,0xc7,0x44,0x45,0x53,0x54,0x00,0x00}};
+        const GUID GUID_RyAxis        = {0xa36d02f5,0xc9f3,0x11cf,{0xbf,0xc7,0x44,0x45,0x53,0x54,0x00,0x00}};
     }
 
-    HMODULE dinput8dll = NULL;
+    struct ObjectDataFormat
+    {
+        ObjectDataFormat()
+        {
+            const DWORD axisType   = DIDFT_AXIS   | DIDFT_OPTIONAL | DIDFT_ANYINSTANCE;
+            const DWORD povType    = DIDFT_POV    | DIDFT_OPTIONAL | DIDFT_ANYINSTANCE;
+            const DWORD buttonType = DIDFT_BUTTON | DIDFT_OPTIONAL | DIDFT_ANYINSTANCE;
+
+            data[0].pguid = &guids::GUID_XAxis;
+            data[0].dwOfs = DIJOFS_X;
+
+            data[1].pguid = &guids::GUID_YAxis;
+            data[1].dwOfs = DIJOFS_Y;
+
+            data[2].pguid = &guids::GUID_ZAxis;
+            data[2].dwOfs = DIJOFS_Z;
+
+            data[3].pguid = &guids::GUID_RxAxis;
+            data[3].dwOfs = DIJOFS_RX;
+
+            data[4].pguid = &guids::GUID_RyAxis;
+            data[4].dwOfs = DIJOFS_RY;
+
+            data[5].pguid = &guids::GUID_RzAxis;
+            data[5].dwOfs = DIJOFS_RZ;
+
+            data[6].pguid = &guids::GUID_Slider;
+            data[6].dwOfs = DIJOFS_SLIDER(0);
+
+            data[7].pguid = &guids::GUID_Slider;
+            data[7].dwOfs = DIJOFS_SLIDER(1);
+
+            for(int i = 0; i < 8; ++i)
+            {
+                data[i].dwType = axisType;
+                data[i].dwFlags = DIDOI_ASPECTPOSITION;
+            }
+
+            for(int i = 0; i < 4; ++i)
+            {
+                data[8 + i].pguid = &guids::GUID_POV;
+                data[8 + i].dwOfs = static_cast<DWORD>(DIJOFS_POV(i));
+                data[8 + i].dwType = povType;
+                data[8 + i].dwFlags = 0;
+            }
+
+            for(int i = 0; i < sf::Joystick::ButtonCount; ++i)
+            {
+                data[8 + 4 + i].pguid = NULL;
+                data[8 + 4 + i].dwOfs = static_cast<DWORD>(DIJOFS_BUTTON(i));
+                data[8 + 4 + i].dwType = buttonType;
+                data[8 + 4 + i].dwFlags = 0;
+            }
+
+            format.dwSize     = sizeof(DIDATAFORMAT);
+            format.dwObjSize  = sizeof(DIOBJECTDATAFORMAT);
+            format.dwFlags    = DIDFT_ABSAXIS;
+            format.dwDataSize = sizeof(DIJOYSTATE);
+            format.dwNumObjs  = 8 + 4 + sf::Joystick::ButtonCount;
+            format.rgodf      = data;
+        }
+
+        DIOBJECTDATAFORMAT data[8 + 4 + sf::Joystick::ButtonCount];
+        DIDATAFORMAT format;
+    };
+
+    const ObjectDataFormat objectDataFormat;
+
     IDirectInput8W* directInput = NULL;
+    HMODULE dinput8dll = NULL;
+    HRESULT (WINAPI *DirectInput8CreateFunc)(HINSTANCE, DWORD, REFIID, LPVOID*, LPUNKNOWN);
 
     struct JoystickRecord
     {
@@ -80,14 +143,7 @@ namespace
 
     typedef std::vector<JoystickRecord> JoystickList;
     JoystickList joystickList;
-}
 
-
-////////////////////////////////////////////////////////////
-// Legacy joystick API
-////////////////////////////////////////////////////////////
-namespace
-{
     struct ConnectionCache
     {
         ConnectionCache() : connected(false) {}
@@ -193,6 +249,25 @@ namespace
 
         return joystickDescription;
     }
+
+    // Device enumeration callback function passed to EnumDevices in updateConnections
+    BOOL CALLBACK deviceEnumerationCallback(const DIDEVICEINSTANCE* deviceInstance, void*)
+    {
+        for (std::size_t i = 0; i < joystickList.size(); ++i)
+        {
+            if (joystickList[i].guid == deviceInstance->guidInstance)
+            {
+                joystickList[i].plugged = true;
+
+                return DIENUM_CONTINUE;
+            }
+        }
+
+        JoystickRecord record = { deviceInstance->guidInstance, sf::Joystick::Count, true };
+        joystickList.push_back(record);
+
+        return DIENUM_CONTINUE;
+    }
 }
 
 namespace sf
@@ -202,199 +277,24 @@ namespace priv
 ////////////////////////////////////////////////////////////
 void JoystickImpl::initialize()
 {
-    // Try to initialize DirectInput
-    initializeDInput();
-
-    if (!directInput)
-        err() << "DirectInput not available, falling back to Windows joystick API" << std::endl;
-
-    // Perform the initial scan and populate the connection cache
-    updateConnections();
-}
-
-
-////////////////////////////////////////////////////////////
-void JoystickImpl::cleanup()
-{
-    // Clean up DirectInput
-    cleanupDInput();
-}
-
-
-////////////////////////////////////////////////////////////
-bool JoystickImpl::isConnected(unsigned int index)
-{
-    if (directInput)
-        return isConnectedDInput(index);
-
-    ConnectionCache& cache = connectionCache[index];
-    if (!lazyUpdates && cache.timer.getElapsedTime() > connectionRefreshDelay)
-    {
-        JOYINFOEX joyInfo;
-        joyInfo.dwSize = sizeof(joyInfo);
-        joyInfo.dwFlags = 0;
-        cache.connected = joyGetPosEx(JOYSTICKID1 + index, &joyInfo) == JOYERR_NOERROR;
-
-        cache.timer.restart();
-    }
-    return cache.connected;
-}
-
-////////////////////////////////////////////////////////////
-void JoystickImpl::setLazyUpdates(bool status)
-{
-    lazyUpdates = status;
-}
-
-////////////////////////////////////////////////////////////
-void JoystickImpl::updateConnections()
-{
-    if (directInput)
-        return updateConnectionsDInput();
-
-    for (unsigned int i = 0; i < Joystick::Count; ++i)
-    {
-        JOYINFOEX joyInfo;
-        joyInfo.dwSize = sizeof(joyInfo);
-        joyInfo.dwFlags = 0;
-        ConnectionCache& cache = connectionCache[i];
-        cache.connected = joyGetPosEx(JOYSTICKID1 + i, &joyInfo) == JOYERR_NOERROR;
-
-        cache.timer.restart();
-    }
-}
-
-////////////////////////////////////////////////////////////
-bool JoystickImpl::open(unsigned int index)
-{
-    if (directInput)
-        return openDInput(index);
-
-    // No explicit "open" action is required
-    m_index = JOYSTICKID1 + index;
-
-    // Store the joystick capabilities
-    bool success = joyGetDevCaps(m_index, &m_caps, sizeof(m_caps)) == JOYERR_NOERROR;
-
-    if (success)
-    {
-        m_identification.name      = getDeviceName(m_index, m_caps);
-        m_identification.productId = m_caps.wPid;
-        m_identification.vendorId  = m_caps.wMid;
-    }
-
-    return success;
-}
-
-
-////////////////////////////////////////////////////////////
-void JoystickImpl::close()
-{
-    if (directInput)
-        closeDInput();
-}
-
-////////////////////////////////////////////////////////////
-JoystickCaps JoystickImpl::getCapabilities() const
-{
-    if (directInput)
-        return getCapabilitiesDInput();
-
-    JoystickCaps caps;
-
-    caps.buttonCount = m_caps.wNumButtons;
-    if (caps.buttonCount > Joystick::ButtonCount)
-        caps.buttonCount = Joystick::ButtonCount;
-
-    caps.axes[Joystick::X]    = true;
-    caps.axes[Joystick::Y]    = true;
-    caps.axes[Joystick::Z]    = (m_caps.wCaps & JOYCAPS_HASZ) != 0;
-    caps.axes[Joystick::R]    = (m_caps.wCaps & JOYCAPS_HASR) != 0;
-    caps.axes[Joystick::U]    = (m_caps.wCaps & JOYCAPS_HASU) != 0;
-    caps.axes[Joystick::V]    = (m_caps.wCaps & JOYCAPS_HASV) != 0;
-    caps.axes[Joystick::PovX] = (m_caps.wCaps & JOYCAPS_HASPOV) != 0;
-    caps.axes[Joystick::PovY] = (m_caps.wCaps & JOYCAPS_HASPOV) != 0;
-
-    return caps;
-}
-
-
-////////////////////////////////////////////////////////////
-Joystick::Identification JoystickImpl::getIdentification() const
-{
-    return m_identification;
-}
-
-
-////////////////////////////////////////////////////////////
-JoystickState JoystickImpl::update()
-{
-    if (directInput)
-        return updateDInput();
-
-    JoystickState state;
-
-    // Get the current joystick state
-    JOYINFOEX pos;
-    pos.dwFlags  = JOY_RETURNX | JOY_RETURNY | JOY_RETURNZ | JOY_RETURNR | JOY_RETURNU | JOY_RETURNV | JOY_RETURNBUTTONS;
-    pos.dwFlags |= (m_caps.wCaps & JOYCAPS_POVCTS) ? JOY_RETURNPOVCTS : JOY_RETURNPOV;
-    pos.dwSize   = sizeof(JOYINFOEX);
-    if (joyGetPosEx(m_index, &pos) == JOYERR_NOERROR)
-    {
-        // The joystick is connected
-        state.connected = true;
-
-        // Axes
-        state.axes[Joystick::X] = (pos.dwXpos - (m_caps.wXmax + m_caps.wXmin) / 2.f) * 200.f / (m_caps.wXmax - m_caps.wXmin);
-        state.axes[Joystick::Y] = (pos.dwYpos - (m_caps.wYmax + m_caps.wYmin) / 2.f) * 200.f / (m_caps.wYmax - m_caps.wYmin);
-        state.axes[Joystick::Z] = (pos.dwZpos - (m_caps.wZmax + m_caps.wZmin) / 2.f) * 200.f / (m_caps.wZmax - m_caps.wZmin);
-        state.axes[Joystick::R] = (pos.dwRpos - (m_caps.wRmax + m_caps.wRmin) / 2.f) * 200.f / (m_caps.wRmax - m_caps.wRmin);
-        state.axes[Joystick::U] = (pos.dwUpos - (m_caps.wUmax + m_caps.wUmin) / 2.f) * 200.f / (m_caps.wUmax - m_caps.wUmin);
-        state.axes[Joystick::V] = (pos.dwVpos - (m_caps.wVmax + m_caps.wVmin) / 2.f) * 200.f / (m_caps.wVmax - m_caps.wVmin);
-
-        // Special case for POV, it is given as an angle
-        if (pos.dwPOV != 0xFFFF)
-        {
-            float angle = pos.dwPOV / 18000.f * 3.141592654f;
-            state.axes[Joystick::PovX] = std::sin(angle) * 100;
-            state.axes[Joystick::PovY] = std::cos(angle) * 100;
-        }
-        else
-        {
-            state.axes[Joystick::PovX] = 0;
-            state.axes[Joystick::PovY] = 0;
-        }
-
-        // Buttons
-        for (unsigned int i = 0; i < Joystick::ButtonCount; ++i)
-            state.buttons[i] = (pos.dwButtons & (1 << i)) != 0;
-    }
-
-    return state;
-}
-
-
-////////////////////////////////////////////////////////////
-void JoystickImpl::initializeDInput()
-{
     // Try to load dinput8.dll
     dinput8dll = LoadLibraryA("dinput8.dll");
 
     if (dinput8dll)
     {
         // Try to get the address of the DirectInput8Create entry point
-        typedef HRESULT(WINAPI *DirectInput8CreateFunc)(HINSTANCE, DWORD, REFIID, LPVOID*, LPUNKNOWN);
-        DirectInput8CreateFunc directInput8Create = reinterpret_cast<DirectInput8CreateFunc>(GetProcAddress(dinput8dll, "DirectInput8Create"));
+        DirectInput8CreateFunc = reinterpret_cast<HRESULT (WINAPI*)(HINSTANCE, DWORD, REFIID, LPVOID*, LPUNKNOWN)>(GetProcAddress(dinput8dll, "DirectInput8Create"));
 
-        if (directInput8Create)
+        if (DirectInput8CreateFunc)
         {
             // Try to acquire a DirectInput 8.x interface
-            HRESULT result = directInput8Create(GetModuleHandleW(NULL), 0x0800, guids::IID_IDirectInput8W, reinterpret_cast<void**>(&directInput), NULL);
+            HRESULT result = DirectInput8CreateFunc(GetModuleHandleW(NULL), 0x0800, guids::IID_IDirectInput8W, reinterpret_cast<void**>(&directInput), NULL);
 
             if (result)
             {
                 // De-initialize everything
                 directInput = NULL;
+                DirectInput8CreateFunc = NULL;
                 FreeLibrary(dinput8dll);
                 dinput8dll = NULL;
 
@@ -408,11 +308,17 @@ void JoystickImpl::initializeDInput()
             dinput8dll = NULL;
         }
     }
+
+    if (!directInput)
+        err() << "DirectInput not available, falling back to Windows joystick API" << std::endl;
+
+    // Perform the initial scan and populate the connection cache
+    updateConnections();
 }
 
 
 ////////////////////////////////////////////////////////////
-void JoystickImpl::cleanupDInput()
+void JoystickImpl::cleanup()
 {
     // Release the DirectInput interface
     if (directInput)
@@ -428,8 +334,25 @@ void JoystickImpl::cleanupDInput()
 
 
 ////////////////////////////////////////////////////////////
-bool JoystickImpl::isConnectedDInput(unsigned int index)
+bool JoystickImpl::isConnected(unsigned int index)
 {
+    if (!directInput)
+    {
+        ConnectionCache& cache = connectionCache[index];
+
+        if (!lazyUpdates && cache.timer.getElapsedTime() > connectionRefreshDelay)
+        {
+            JOYINFOEX joyInfo;
+            joyInfo.dwSize = sizeof(joyInfo);
+            joyInfo.dwFlags = 0;
+            cache.connected = joyGetPosEx(JOYSTICKID1 + index, &joyInfo) == JOYERR_NOERROR;
+
+            cache.timer.restart();
+        }
+
+        return cache.connected;
+    }
+
     // Check if a joystick with the given index is in the connected list
     for (std::vector<JoystickRecord>::iterator i = joystickList.begin(); i != joystickList.end(); ++i)
     {
@@ -440,16 +363,37 @@ bool JoystickImpl::isConnectedDInput(unsigned int index)
     return false;
 }
 
+////////////////////////////////////////////////////////////
+void JoystickImpl::setLazyUpdates(bool status)
+{
+    lazyUpdates = status;
+}
 
 ////////////////////////////////////////////////////////////
-void JoystickImpl::updateConnectionsDInput()
+void JoystickImpl::updateConnections()
 {
+    if (!directInput)
+    {
+        for (unsigned int i = 0; i < Joystick::Count; ++i)
+        {
+            JOYINFOEX joyInfo;
+            joyInfo.dwSize = sizeof(joyInfo);
+            joyInfo.dwFlags = 0;
+            ConnectionCache& cache = connectionCache[i];
+            cache.connected = joyGetPosEx(JOYSTICKID1 + i, &joyInfo) == JOYERR_NOERROR;
+
+            cache.timer.restart();
+        }
+
+        return;
+    }
+
     // Clear plugged flags so we can determine which devices were added/removed
     for (std::size_t i = 0; i < joystickList.size(); ++i)
         joystickList[i].plugged = false;
 
     // Enumerate devices
-    HRESULT result = directInput->EnumDevices(DI8DEVCLASS_GAMECTRL, &JoystickImpl::deviceEnumerationCallback, NULL, DIEDFL_ALLDEVICES);
+    HRESULT result = directInput->EnumDevices(DI8DEVCLASS_GAMECTRL, deviceEnumerationCallback, NULL, DIEDFL_ALLDEVICES);
 
     // Remove devices that were not connected during the enumeration
     for (std::vector<JoystickRecord>::iterator i = joystickList.begin(); i != joystickList.end();)
@@ -484,10 +428,27 @@ void JoystickImpl::updateConnectionsDInput()
     }
 }
 
-
 ////////////////////////////////////////////////////////////
-bool JoystickImpl::openDInput(unsigned int index)
+bool JoystickImpl::open(unsigned int index)
 {
+    if (!directInput)
+    {
+        // No explicit "open" action is required
+        m_index = JOYSTICKID1 + index;
+
+        // Store the joystick capabilities
+        bool success = joyGetDevCaps(m_index, &m_caps, sizeof(m_caps)) == JOYERR_NOERROR;
+
+        if (success)
+        {
+        m_identification.name      = getDeviceName(m_index, m_caps);
+        m_identification.productId = m_caps.wPid;
+        m_identification.vendorId  = m_caps.wMid;
+        }
+
+        return success;
+    }
+
     // Initialize DirectInput members
     m_device = NULL;
 
@@ -515,75 +476,8 @@ bool JoystickImpl::openDInput(unsigned int index)
                 return false;
             }
 
-            static bool formatInitialized = false;
-            static DIDATAFORMAT format;
-
-            if (!formatInitialized)
-            {
-                const DWORD axisType   = DIDFT_AXIS   | DIDFT_OPTIONAL | DIDFT_ANYINSTANCE;
-                const DWORD povType    = DIDFT_POV    | DIDFT_OPTIONAL | DIDFT_ANYINSTANCE;
-                const DWORD buttonType = DIDFT_BUTTON | DIDFT_OPTIONAL | DIDFT_ANYINSTANCE;
-
-                static DIOBJECTDATAFORMAT data[8 + 4 + sf::Joystick::ButtonCount];
-
-                data[0].pguid = &guids::GUID_XAxis;
-                data[0].dwOfs = DIJOFS_X;
-
-                data[1].pguid = &guids::GUID_YAxis;
-                data[1].dwOfs = DIJOFS_Y;
-
-                data[2].pguid = &guids::GUID_ZAxis;
-                data[2].dwOfs = DIJOFS_Z;
-
-                data[3].pguid = &guids::GUID_RxAxis;
-                data[3].dwOfs = DIJOFS_RX;
-
-                data[4].pguid = &guids::GUID_RyAxis;
-                data[4].dwOfs = DIJOFS_RY;
-
-                data[5].pguid = &guids::GUID_RzAxis;
-                data[5].dwOfs = DIJOFS_RZ;
-
-                data[6].pguid = &guids::GUID_Slider;
-                data[6].dwOfs = DIJOFS_SLIDER(0);
-
-                data[7].pguid = &guids::GUID_Slider;
-                data[7].dwOfs = DIJOFS_SLIDER(1);
-
-                for (int i = 0; i < 8; ++i)
-                {
-                    data[i].dwType = axisType;
-                    data[i].dwFlags = DIDOI_ASPECTPOSITION;
-                }
-
-                for (int i = 0; i < 4; ++i)
-                {
-                    data[8 + i].pguid = &guids::GUID_POV;
-                    data[8 + i].dwOfs = static_cast<DWORD>(DIJOFS_POV(i));
-                    data[8 + i].dwType = povType;
-                    data[8 + i].dwFlags = 0;
-                }
-
-                for (int i = 0; i < sf::Joystick::ButtonCount; ++i)
-                {
-                    data[8 + 4 + i].pguid = NULL;
-                    data[8 + 4 + i].dwOfs = static_cast<DWORD>(DIJOFS_BUTTON(i));
-                    data[8 + 4 + i].dwType = buttonType;
-                    data[8 + 4 + i].dwFlags = 0;
-                }
-
-                format.dwSize = sizeof(DIDATAFORMAT);
-                format.dwObjSize = sizeof(DIOBJECTDATAFORMAT);
-                format.dwFlags = DIDFT_ABSAXIS;
-                format.dwDataSize = sizeof(DIJOYSTATE);
-                format.dwNumObjs = 8 + 4 + sf::Joystick::ButtonCount;
-                format.rgodf = data;
-
-                formatInitialized = true;
-            }
-
             // Set device data format
-            result = m_device->SetDataFormat(&format);
+            result = m_device->SetDataFormat(&objectDataFormat.format);
 
             if (result)
             {
@@ -675,7 +569,7 @@ bool JoystickImpl::openDInput(unsigned int index)
 
 
 ////////////////////////////////////////////////////////////
-void JoystickImpl::closeDInput()
+void JoystickImpl::close()
 {
     if (m_device)
     {
@@ -685,153 +579,199 @@ void JoystickImpl::closeDInput()
     }
 }
 
-
 ////////////////////////////////////////////////////////////
-JoystickCaps JoystickImpl::getCapabilitiesDInput() const
+JoystickCaps JoystickImpl::getCapabilities() const
 {
     JoystickCaps caps;
 
-    // Count how many buttons have valid offsets
-    caps.buttonCount = 0;
-
-    for (int i = 0; i < Joystick::ButtonCount; ++i)
+    if (!directInput)
     {
-        if (m_buttons[i] != -1)
-            ++caps.buttonCount;
-    }
+        caps.buttonCount = m_caps.wNumButtons;
 
-    // Check which axes have valid offsets
-    for (int i = 0; i < Joystick::AxisCount; ++i)
-        caps.axes[i] = (m_axes[i] != -1);
+        if (caps.buttonCount > Joystick::ButtonCount)
+            caps.buttonCount = Joystick::ButtonCount;
+
+        caps.axes[Joystick::X]    = true;
+        caps.axes[Joystick::Y]    = true;
+        caps.axes[Joystick::Z]    = (m_caps.wCaps & JOYCAPS_HASZ) != 0;
+        caps.axes[Joystick::R]    = (m_caps.wCaps & JOYCAPS_HASR) != 0;
+        caps.axes[Joystick::U]    = (m_caps.wCaps & JOYCAPS_HASU) != 0;
+        caps.axes[Joystick::V]    = (m_caps.wCaps & JOYCAPS_HASV) != 0;
+        caps.axes[Joystick::PovX] = (m_caps.wCaps & JOYCAPS_HASPOV) != 0;
+        caps.axes[Joystick::PovY] = (m_caps.wCaps & JOYCAPS_HASPOV) != 0;
+    }
+    else
+    {
+        // Count how many buttons have valid offsets
+        caps.buttonCount = 0;
+
+        for (int i = 0; i < Joystick::ButtonCount; ++i)
+        {
+            if (m_buttons[i] != -1)
+                ++caps.buttonCount;
+        }
+
+        // Check which axes have valid offsets
+        for (int i = 0; i < Joystick::AxisCount; ++i)
+            caps.axes[i] = (m_axes[i] != -1);
+    }
 
     return caps;
 }
 
 
 ////////////////////////////////////////////////////////////
-JoystickState JoystickImpl::updateDInput()
+Joystick::Identification JoystickImpl::getIdentification() const
 {
-    JoystickState state;
-
-    if (m_device)
-    {
-        // Poll the device
-        m_device->Poll();
-
-        DIJOYSTATE joystate;
-
-        // Try to get the device state
-        HRESULT result = m_device->GetDeviceState(sizeof(joystate), &joystate);
-
-        // If we have not acquired or have lost the device, attempt to (re-)acquire it and get the device state again
-        if ((result == DIERR_NOTACQUIRED) || (result == DIERR_INPUTLOST))
-        {
-            m_device->Acquire();
-            m_device->Poll();
-            result = m_device->GetDeviceState(sizeof(joystate), &joystate);
-        }
-
-        // If we still can't get the device state, assume it has been disconnected
-        if ((result == DIERR_NOTACQUIRED) || (result == DIERR_INPUTLOST))
-        {
-            m_device->Release();
-            m_device = NULL;
-
-            return state;
-        }
-
-        if (result)
-        {
-            err() << "Failed to get DirectInput device state: " << result << std::endl;
-
-            return state;
-        }
-
-        // Get the current state of each axis
-        for (int i = 0; i < Joystick::AxisCount; ++i)
-        {
-            if (m_axes[i] != -1)
-            {
-                if (i == Joystick::PovX)
-                {
-                    unsigned short value = LOWORD(*reinterpret_cast<const DWORD*>(reinterpret_cast<const char*>(&joystate) + m_axes[i]));
-
-                    if (value != 0xFFFF)
-                    {
-                        float angle = (static_cast<float>(value)) * 3.141592654f / DI_DEGREES / 180.f;
-
-                        state.axes[i] = std::sin(angle) * 100.f;
-                    }
-                    else
-                    {
-                        state.axes[i] = 0;
-                    }
-                }
-                else if (i == Joystick::PovY)
-                {
-                    unsigned short value = LOWORD(*reinterpret_cast<const DWORD*>(reinterpret_cast<const char*>(&joystate) + m_axes[i]));
-
-                    if (value != 0xFFFF)
-                    {
-                        float angle = (static_cast<float>(value)) * 3.141592654f / DI_DEGREES / 180.f;
-
-                        state.axes[i] = std::cos(angle) * 100.f;
-                    }
-                    else
-                    {
-                        state.axes[i] = 0.f;
-                    }
-                }
-                else
-                {
-                    state.axes[i] = (static_cast<float>(*reinterpret_cast<const LONG*>(reinterpret_cast<const char*>(&joystate) + m_axes[i])) + 0.5f) * 100.f / 32767.5f;
-                }
-            }
-            else
-            {
-                state.axes[i] = 0.f;
-            }
-        }
-
-        // Get the current state of each button
-        for (int i = 0; i < Joystick::ButtonCount; ++i)
-        {
-            if (m_buttons[i] != -1)
-            {
-                BYTE value = *reinterpret_cast<const BYTE*>(reinterpret_cast<const char*>(&joystate) + m_buttons[i]);
-
-                state.buttons[i] = ((value & 0x80) != 0);
-            }
-            else
-            {
-                state.buttons[i] = false;
-            }
-        }
-
-        state.connected = true;
-    }
-
-    return state;
+    return m_identification;
 }
 
 
 ////////////////////////////////////////////////////////////
-BOOL CALLBACK JoystickImpl::deviceEnumerationCallback(const DIDEVICEINSTANCE* deviceInstance, void*)
+JoystickState JoystickImpl::update()
 {
-    for (std::size_t i = 0; i < joystickList.size(); ++i)
-    {
-        if (joystickList[i].guid == deviceInstance->guidInstance)
-        {
-            joystickList[i].plugged = true;
+    JoystickState state;
 
-            return DIENUM_CONTINUE;
+    if (!directInput)
+    {
+        // Get the current joystick state
+        JOYINFOEX pos;
+        pos.dwFlags  = JOY_RETURNX | JOY_RETURNY | JOY_RETURNZ | JOY_RETURNR | JOY_RETURNU | JOY_RETURNV | JOY_RETURNBUTTONS;
+        pos.dwFlags |= (m_caps.wCaps & JOYCAPS_POVCTS) ? JOY_RETURNPOVCTS : JOY_RETURNPOV;
+        pos.dwSize   = sizeof(JOYINFOEX);
+        if (joyGetPosEx(m_index, &pos) == JOYERR_NOERROR)
+        {
+            // The joystick is connected
+            state.connected = true;
+
+            // Axes
+            state.axes[Joystick::X] = (pos.dwXpos - (m_caps.wXmax + m_caps.wXmin) / 2.f) * 200.f / (m_caps.wXmax - m_caps.wXmin);
+            state.axes[Joystick::Y] = (pos.dwYpos - (m_caps.wYmax + m_caps.wYmin) / 2.f) * 200.f / (m_caps.wYmax - m_caps.wYmin);
+            state.axes[Joystick::Z] = (pos.dwZpos - (m_caps.wZmax + m_caps.wZmin) / 2.f) * 200.f / (m_caps.wZmax - m_caps.wZmin);
+            state.axes[Joystick::R] = (pos.dwRpos - (m_caps.wRmax + m_caps.wRmin) / 2.f) * 200.f / (m_caps.wRmax - m_caps.wRmin);
+            state.axes[Joystick::U] = (pos.dwUpos - (m_caps.wUmax + m_caps.wUmin) / 2.f) * 200.f / (m_caps.wUmax - m_caps.wUmin);
+            state.axes[Joystick::V] = (pos.dwVpos - (m_caps.wVmax + m_caps.wVmin) / 2.f) * 200.f / (m_caps.wVmax - m_caps.wVmin);
+
+            // Special case for POV, it is given as an angle
+            if (pos.dwPOV != 0xFFFF)
+            {
+                float angle = pos.dwPOV / 18000.f * 3.141592654f;
+                state.axes[Joystick::PovX] = std::sin(angle) * 100;
+                state.axes[Joystick::PovY] = std::cos(angle) * 100;
+            }
+            else
+            {
+                state.axes[Joystick::PovX] = 0;
+                state.axes[Joystick::PovY] = 0;
+            }
+
+            // Buttons
+            for (unsigned int i = 0; i < Joystick::ButtonCount; ++i)
+                state.buttons[i] = (pos.dwButtons & (1 << i)) != 0;
+        }
+    }
+    else
+    {
+        if (m_device)
+        {
+            // Poll the device
+            m_device->Poll();
+
+            DIJOYSTATE joystate;
+
+            // Try to get the device state
+            HRESULT result = m_device->GetDeviceState(sizeof(joystate), &joystate);
+
+            // If we have not acquired or have lost the device, attempt to (re-)acquire it and get the device state again
+            if ((result == DIERR_NOTACQUIRED) || (result == DIERR_INPUTLOST))
+            {
+                m_device->Acquire();
+                m_device->Poll();
+                result = m_device->GetDeviceState(sizeof(joystate), &joystate);
+            }
+
+            // If we still can't get the device state, assume it has been disconnected
+            if ((result == DIERR_NOTACQUIRED) || (result == DIERR_INPUTLOST))
+            {
+                m_device->Release();
+                m_device = NULL;
+
+                return state;
+            }
+
+            if (result)
+            {
+                err() << "Failed to get DirectInput device state: " << result << std::endl;
+
+                return state;
+            }
+
+            // Get the current state of each axis
+            for (int i = 0; i < Joystick::AxisCount; ++i)
+            {
+                if (m_axes[i] != -1)
+                {
+                    if (i == Joystick::PovX)
+                    {
+                        unsigned short value = LOWORD(*reinterpret_cast<const DWORD*>(reinterpret_cast<const char*>(&joystate) + m_axes[i]));
+
+                        if (value != 0xFFFF)
+                        {
+                            float angle = (static_cast<float>(value)) * 3.141592654f / DI_DEGREES / 180.f;
+
+                            state.axes[i] = std::sin(angle) * 100.f;
+                        }
+                        else
+                        {
+                            state.axes[i] = 0;
+                        }
+                    }
+                    else if (i == Joystick::PovY)
+                    {
+                        unsigned short value = LOWORD(*reinterpret_cast<const DWORD*>(reinterpret_cast<const char*>(&joystate) + m_axes[i]));
+
+                        if (value != 0xFFFF)
+                        {
+                            float angle = (static_cast<float>(value)) * 3.141592654f / DI_DEGREES / 180.f;
+
+                            state.axes[i] = std::cos(angle) * 100.f;
+                        }
+                        else
+                        {
+                            state.axes[i] = 0.f;
+                        }
+                    }
+                    else
+                    {
+                        state.axes[i] = (static_cast<float>(*reinterpret_cast<const LONG*>(reinterpret_cast<const char*>(&joystate) + m_axes[i])) + 0.5f) * 100.f / 32767.5f;
+                    }
+                }
+                else
+                {
+                    state.axes[i] = 0.f;
+                }
+            }
+
+            // Get the current state of each button
+            for (int i = 0; i < Joystick::ButtonCount; ++i)
+            {
+                if (m_buttons[i] != -1)
+                {
+                    BYTE value = *reinterpret_cast<const BYTE*>(reinterpret_cast<const char*>(&joystate) + m_buttons[i]);
+
+                    state.buttons[i] = ((value & 0x80) != 0);
+                }
+                else
+                {
+                    state.buttons[i] = false;
+                }
+            }
+
+            state.connected = true;
         }
     }
 
-    JoystickRecord record = { deviceInstance->guidInstance, sf::Joystick::Count, true };
-    joystickList.push_back(record);
-
-    return DIENUM_CONTINUE;
+    return state;
 }
 
 
