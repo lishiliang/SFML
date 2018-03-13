@@ -71,14 +71,15 @@ namespace
     typedef std::map<sf::Uint64, sf::Uint64> ContextRenderTargetMap;
     ContextRenderTargetMap contextRenderTargetMap;
 
-    // Callback that is called every time a context is destroyed
-    void contextDestroyCallback(void* arg)
+    // Check if a RenderTarget with the given ID is active in the current context
+    bool isActive(sf::Uint64 id)
     {
-        sf::Lock lock(mutex);
+        ContextRenderTargetMap::iterator iter = contextRenderTargetMap.find(sf::Context::getActiveContextId());
 
-        sf::Uint64 contextId = sf::Context::getActiveContextId();
+        if ((iter == contextRenderTargetMap.end()) || (iter->second != id))
+            return false;
 
-
+        return true;
     }
 
     // Convert an sf::BlendMode::Factor constant to the corresponding OpenGL constant.
@@ -143,7 +144,7 @@ RenderTarget::~RenderTarget()
 ////////////////////////////////////////////////////////////
 void RenderTarget::clear(const Color& color)
 {
-    if (setActive(true))
+    if (isActive(m_id) || setActive(true))
     {
         // Unbind texture to fix RenderTexture preventing clear
         applyTexture(NULL);
@@ -258,7 +259,7 @@ void RenderTarget::draw(const Vertex* vertices, std::size_t vertexCount,
         }
     #endif
 
-    if (setupState())
+    if (isActive(m_id) || setActive(true))
     {
         // Check if the vertex count is low enough so that we can pre-transform them
         bool useVertexCache = (vertexCount <= StatesCache::VertexCacheSize);
@@ -358,7 +359,7 @@ void RenderTarget::draw(const VertexBuffer& vertexBuffer, std::size_t firstVerte
         }
     #endif
 
-    if (setupState())
+    if (isActive(m_id) || setActive(true))
     {
         setupDraw(false, states);
 
@@ -390,7 +391,7 @@ void RenderTarget::draw(const VertexBuffer& vertexBuffer, std::size_t firstVerte
 ////////////////////////////////////////////////////////////
 void RenderTarget::pushGLStates()
 {
-    if (setActive(true))
+    if (isActive(m_id) || setActive(true))
     {
         #ifdef SFML_DEBUG
             // make sure that the user didn't leave an unchecked OpenGL error
@@ -422,7 +423,7 @@ void RenderTarget::pushGLStates()
 ////////////////////////////////////////////////////////////
 void RenderTarget::popGLStates()
 {
-    if (setActive(true))
+    if (isActive(m_id) || setActive(true))
     {
         glCheck(glMatrixMode(GL_PROJECTION));
         glCheck(glPopMatrix());
@@ -451,7 +452,7 @@ void RenderTarget::resetGLStates()
         setActive(false);
     #endif
 
-    if (setActive(true))
+    if (isActive(m_id) || setActive(true))
     {
         // Make sure that extensions are initialized
         priv::ensureExtensionsInit();
@@ -494,13 +495,6 @@ void RenderTarget::resetGLStates()
         setView(getView());
 
         m_cache.enable = true;
-
-        // Mark this RenderTarget as active in the tracking map
-        {
-            sf::Lock lock(mutex);
-
-            contextRenderTargetMap[Context::getActiveContextId()] = m_id;
-        }
     }
 }
 
@@ -514,6 +508,43 @@ void RenderTarget::initialize()
 
     // Set GL states only on first draw, so that we don't pollute user's states
     m_cache.glStatesSet = false;
+}
+
+
+////////////////////////////////////////////////////////////
+void RenderTarget::track(bool active)
+{
+    // Mark this RenderTarget as active or no longer active in the tracking map
+    {
+        sf::Lock lock(mutex);
+
+        Uint64 contextId = Context::getActiveContextId();
+
+        ContextRenderTargetMap::iterator iter = contextRenderTargetMap.find(contextId);
+
+        if (active)
+        {
+            if (iter == contextRenderTargetMap.end())
+            {
+                contextRenderTargetMap[contextId] = m_id;
+
+                m_cache.enable = false;
+            }
+            else if (iter->second != m_id)
+            {
+                iter->second = m_id;
+
+                m_cache.enable = false;
+            }
+        }
+        else
+        {
+            if (iter != contextRenderTargetMap.end())
+                contextRenderTargetMap.erase(iter);
+
+            m_cache.enable = false;
+        }
+    }
 }
 
 
@@ -729,8 +760,7 @@ void RenderTarget::cleanupDraw(const RenderStates& states)
     if (states.texture && states.texture->m_fboAttachment)
         applyTexture(NULL);
 
-    // Re-enable the cache at the end of the draw if it was
-    // disabled in setupState
+    // Re-enable the cache at the end of the draw if it was disabled
     m_cache.enable = true;
 }
 

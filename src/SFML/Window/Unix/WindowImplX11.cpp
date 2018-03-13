@@ -173,7 +173,7 @@ namespace
 
         if (result != Success || actualType != XA_WINDOW || numItems != 1)
         {
-            if (result == Success)
+            if(result == Success)
                 XFree(data);
 
             sf::priv::CloseDisplay(display);
@@ -205,7 +205,7 @@ namespace
 
         if (result != Success || actualType != XA_WINDOW || numItems != 1)
         {
-            if (result == Success)
+            if(result == Success)
                 XFree(data);
 
             sf::priv::CloseDisplay(display);
@@ -269,7 +269,7 @@ namespace
             windowManagerName = sf::String::fromUtf8(begin, end);
         }
 
-        if (result == Success)
+        if(result == Success)
             XFree(data);
 
         sf::priv::CloseDisplay(display);
@@ -486,7 +486,6 @@ m_inputMethod    (NULL),
 m_inputContext   (NULL),
 m_isExternal     (true),
 m_oldVideoMode   (0),
-m_oldRRCrtc      (0),
 m_hiddenCursor   (0),
 m_lastCursor     (None),
 m_keyRepeat      (true),
@@ -535,7 +534,6 @@ m_inputMethod    (NULL),
 m_inputContext   (NULL),
 m_isExternal     (false),
 m_oldVideoMode   (0),
-m_oldRRCrtc      (0),
 m_hiddenCursor   (0),
 m_lastCursor     (None),
 m_keyRepeat      (true),
@@ -709,15 +707,6 @@ m_lastInputTime  (0)
     // Set fullscreen video mode and switch to fullscreen if necessary
     if (m_fullscreen)
     {
-        // Disable hint for min and max size,
-        // otherwise some windows managers will not remove window decorations
-        XSizeHints *sizeHints = XAllocSizeHints();
-        long flags = 0;
-        XGetWMNormalHints(m_display, m_window, sizeHints, &flags);
-        sizeHints->flags &= ~(PMinSize | PMaxSize);
-        XSetWMNormalHints(m_display, m_window, sizeHints);
-        XFree(sizeHints);
-
         setPosition(Vector2i(0, 0));
         setVideoMode(mode);
         switchToFullscreen();
@@ -732,11 +721,11 @@ WindowImplX11::~WindowImplX11()
     cleanup();
 
     // Destroy icon pixmap
-    if (m_iconPixmap)
+    if(m_iconPixmap)
         XFreePixmap(m_display, m_iconPixmap);
 
     // Destroy icon mask pixmap
-    if (m_iconMaskPixmap)
+    if(m_iconMaskPixmap)
         XFreePixmap(m_display, m_iconMaskPixmap);
 
     // Destroy the cursor
@@ -967,10 +956,10 @@ void WindowImplX11::setIcon(unsigned int width, unsigned int height, const Uint8
         return;
     }
 
-    if (m_iconPixmap)
+    if(m_iconPixmap)
         XFreePixmap(m_display, m_iconPixmap);
 
-    if (m_iconMaskPixmap)
+    if(m_iconMaskPixmap)
         XFreePixmap(m_display, m_iconMaskPixmap);
 
     m_iconPixmap = XCreatePixmap(m_display, RootWindow(m_display, m_screen), width, height, defDepth);
@@ -1247,113 +1236,53 @@ void WindowImplX11::setVideoMode(const VideoMode& mode)
         return;
 
     // Check if the XRandR extension is present
-    int xRandRMajor, xRandRMinor;
-    if (!checkXRandR(xRandRMajor, xRandRMinor))
+    int version;
+    if (!XQueryExtension(m_display, "RANDR", &version, &version, &version))
     {
         // XRandR extension is not supported: we cannot use fullscreen mode
         err() << "Fullscreen is not supported, switching to window mode" << std::endl;
         return;
     }
 
-    // Get root window
-    ::Window rootWindow = RootWindow(m_display, m_screen);
+    // Get the current configuration
+    XRRScreenConfiguration* config = XRRGetScreenInfo(m_display, RootWindow(m_display, m_screen));
 
-    // Get the screen resources
-    XRRScreenResources* res = XRRGetScreenResources(m_display, rootWindow);
-    if (!res)
+    if (!config)
     {
-        err() << "Failed to get the current screen resources for fullscreen mode, switching to window mode" << std::endl;
-        return;
-    }
-
-    RROutput output;
-
-    // if version >= 1.3 get the primary screen else take the first screen
-    if ((xRandRMajor == 1 && xRandRMinor >= 3) || xRandRMajor > 1)
-    {
-        output = XRRGetOutputPrimary(m_display, rootWindow);
-
-        // Check if returned output is valid, otherwise use the first screen
-        if (output == None)
-            output = res->outputs[0];
-    }
-    else
-    {
-        output = res->outputs[0];
-    }
-
-    // Get output info from output
-    XRROutputInfo* outputInfo = XRRGetOutputInfo(m_display, res, output);
-    if (!outputInfo || outputInfo->connection == RR_Disconnected)
-    {
-        XRRFreeScreenResources(res);
-
-        // If outputInfo->connection == RR_Disconnected, free output info
-        if (outputInfo)
-            XRRFreeOutputInfo(outputInfo);
-
-        err() << "Failed to get output info for fullscreen mode, switching to window mode" << std::endl;
-        return;
-    }
-
-    // Retreive current RRMode, screen position and rotation
-    XRRCrtcInfo* crtcInfo = XRRGetCrtcInfo(m_display, res, outputInfo->crtc);
-    if (!crtcInfo)
-    {
-        XRRFreeScreenResources(res);
-        XRRFreeOutputInfo(outputInfo);
-        err() << "Failed to get crtc info for fullscreen mode, switching to window mode" << std::endl;
-        return;
-    }
-
-    // Find RRMode to set
-    bool modeFound = false;
-    RRMode xRandMode;
-
-    for (int i = 0; (i < res->nmode) && !modeFound; i++)
-    {
-        if (crtcInfo->rotation == RR_Rotate_90 || crtcInfo->rotation == RR_Rotate_270)
-            std::swap(res->modes[i].height, res->modes[i].width);
-
-        // Check if screen size match
-        if (res->modes[i].width == static_cast<int>(mode.width) &&
-            res->modes[i].height == static_cast<int>(mode.height))
-        {
-            xRandMode = res->modes[i].id;
-            modeFound = true;
-        }
-    }
-
-    if (!modeFound)
-    {
-        XRRFreeScreenResources(res);
-        XRRFreeOutputInfo(outputInfo);
-        err() << "Failed to find a matching RRMode for fullscreen mode, switching to window mode" << std::endl;
+        // Failed to get the screen configuration
+        err() << "Failed to get the current screen configuration for fullscreen mode, switching to window mode" << std::endl;
         return;
     }
 
     // Save the current video mode before we switch to fullscreen
-    m_oldVideoMode = crtcInfo->mode;
-    m_oldRRCrtc = outputInfo->crtc;
+    Rotation currentRotation;
+    m_oldVideoMode = XRRConfigCurrentConfiguration(config, &currentRotation);
 
-    // Switch to fullscreen mode
-    XRRSetCrtcConfig(m_display,
-                     res,
-                     outputInfo->crtc,
-                     CurrentTime,
-                     crtcInfo->x,
-                     crtcInfo->y,
-                     xRandMode,
-                     crtcInfo->rotation,
-                     &output,
-                     1);
+    // Get the available screen sizes
+    int nbSizes;
+    XRRScreenSize* sizes = XRRConfigSizes(config, &nbSizes);
 
-    // Set "this" as the current fullscreen window
-    fullscreenWindow = this;
+    // Search for a matching size
+    for (int i = 0; (sizes && i < nbSizes); ++i)
+    {
+        XRRConfigRotations(config, &currentRotation);
 
-    XRRFreeScreenResources(res);
-    XRRFreeOutputInfo(outputInfo);
-    XRRFreeCrtcInfo(crtcInfo);
+        if (currentRotation == RR_Rotate_90 || currentRotation == RR_Rotate_270)
+            std::swap(sizes[i].height, sizes[i].width);
+
+        if ((sizes[i].width  == static_cast<int>(mode.width)) && (sizes[i].height == static_cast<int>(mode.height)))
+        {
+            // Switch to fullscreen mode
+            XRRSetScreenConfig(m_display, config, RootWindow(m_display, m_screen), i, currentRotation, CurrentTime);
+
+            // Set "this" as the current fullscreen window
+            fullscreenWindow = this;
+            break;
+        }
+    }
+
+    // Free the configuration instance
+    XRRFreeScreenConfigInfo(config);
 }
 
 
@@ -1362,55 +1291,19 @@ void WindowImplX11::resetVideoMode()
 {
     if (fullscreenWindow == this)
     {
-        // Try to set old configuration
-        // Check if the XRandR extension
-        int xRandRMajor, xRandRMinor;
-        if (checkXRandR(xRandRMajor, xRandRMinor))
+        // Get current screen info
+        XRRScreenConfiguration* config = XRRGetScreenInfo(m_display, RootWindow(m_display, m_screen));
+        if (config)
         {
-            XRRScreenResources* res = XRRGetScreenResources(m_display, DefaultRootWindow(m_display));
-            if (!res)
-            {
-                err() << "Failed to get the current screen resources to reset the video mode" << std::endl;
-                return;
-            }
+            // Get the current rotation
+            Rotation currentRotation;
+            XRRConfigCurrentConfiguration(config, &currentRotation);
 
-            // Retreive current screen position and rotation
-            XRRCrtcInfo* crtcInfo = XRRGetCrtcInfo(m_display, res, m_oldRRCrtc);
-            if (!crtcInfo)
-            {
-                XRRFreeScreenResources(res);
-                err() << "Failed to get crtc info to reset the video mode" << std::endl;
-                return;
-            }
+            // Reset the video mode
+            XRRSetScreenConfig(m_display, config, RootWindow(m_display, m_screen), m_oldVideoMode, currentRotation, CurrentTime);
 
-            RROutput output;
-
-            // if version >= 1.3 get the primary screen else take the first screen
-            if ((xRandRMajor == 1 && xRandRMinor >= 3) || xRandRMajor > 1)
-            {
-                output = XRRGetOutputPrimary(m_display, DefaultRootWindow(m_display));
-
-                // Check if returned output is valid, otherwise use the first screen
-                if (output == None)
-                    output = res->outputs[0];
-            }
-            else{
-                output = res->outputs[0];
-            }
-
-            XRRSetCrtcConfig(m_display,
-                             res,
-                             m_oldRRCrtc,
-                             CurrentTime,
-                             crtcInfo->x,
-                             crtcInfo->y,
-                             m_oldVideoMode,
-                             crtcInfo->rotation,
-                             &output,
-                             1);
-
-            XRRFreeCrtcInfo(crtcInfo);
-            XRRFreeScreenResources(res);
+            // Free the configuration instance
+            XRRFreeScreenConfigInfo(config);
         }
 
         // Reset the fullscreen window
@@ -1606,7 +1499,7 @@ void WindowImplX11::updateLastInputTime(::Time time)
     {
         Atom netWmUserTime = getAtom("_NET_WM_USER_TIME", true);
 
-        if (netWmUserTime)
+        if(netWmUserTime)
         {
             XChangeProperty(m_display,
                             m_window,
@@ -2071,28 +1964,6 @@ bool WindowImplX11::processEvent(XEvent& windowEvent)
 
             break;
         }
-    }
-
-    return true;
-}
-
-
-////////////////////////////////////////////////////////////
-bool WindowImplX11::checkXRandR(int& xRandRMajor, int& xRandRMinor)
-{
-    // Check if the XRandR extension is present
-    int version;
-    if (!XQueryExtension(m_display, "RANDR", &version, &version, &version))
-    {
-        err() << "XRandR extension is not supported" << std::endl;
-        return false;
-    }
-
-    // Check XRandR version, 1.2 required
-    if (!XRRQueryVersion(m_display, &xRandRMajor, &xRandRMinor) || xRandRMajor < 1 || (xRandRMajor == 1 && xRandRMinor < 2 ))
-    {
-        err() << "XRandR is to old" << std::endl;
-        return false;
     }
 
     return true;

@@ -180,18 +180,52 @@ bool RenderTextureImplFBO::create(unsigned int width, unsigned int height, unsig
     // Save our texture ID in order to be able to attach it to an FBO at any time
     m_textureId = textureId;
 
-    return createFrameBuffer();
+    // We can't create an FBO now if there is no active context
+    if (!Context::getActiveContextId())
+        return true;
+
+#ifndef SFML_OPENGL_ES
+
+    // Save the current bindings so we can restore them after we are done
+    GLint readFramebuffer = 0;
+    GLint drawFramebuffer = 0;
+
+    glCheck(glGetIntegerv(GLEXT_GL_READ_FRAMEBUFFER_BINDING, &readFramebuffer));
+    glCheck(glGetIntegerv(GLEXT_GL_DRAW_FRAMEBUFFER_BINDING, &drawFramebuffer));
+
+    if (createFrameBuffer())
+    {
+        // Restore previously bound framebuffers
+        glCheck(GLEXT_glBindFramebuffer(GLEXT_GL_READ_FRAMEBUFFER, readFramebuffer));
+        glCheck(GLEXT_glBindFramebuffer(GLEXT_GL_DRAW_FRAMEBUFFER, drawFramebuffer));
+
+        return true;
+    }
+
+#else
+
+    // Save the current binding so we can restore them after we are done
+    GLint frameBuffer = 0;
+
+    glCheck(glGetIntegerv(GLEXT_GL_FRAMEBUFFER_BINDING, &frameBuffer));
+
+    if (createFrameBuffer())
+    {
+        // Restore previously bound framebuffer
+        glCheck(GLEXT_glBindFramebuffer(GLEXT_GL_FRAMEBUFFER, frameBuffer));
+
+        return true;
+    }
+
+#endif
+
+    return false;
 }
 
 
 ////////////////////////////////////////////////////////////
 bool RenderTextureImplFBO::createFrameBuffer()
 {
-    Uint64 contextId = Context::getActiveContextId();
-
-    if (!m_textureId || !contextId)
-        return false;
-
     // Create the framebuffer object
     GLuint frameBuffer = 0;
     glCheck(GLEXT_glGenFramebuffers(1, &frameBuffer));
@@ -226,7 +260,7 @@ bool RenderTextureImplFBO::createFrameBuffer()
     Lock lock(mutex);
 
     // Insert the FBO into our map
-    m_frameBuffers.insert(std::make_pair(contextId, static_cast<unsigned int>(frameBuffer)));
+    m_frameBuffers.insert(std::make_pair(Context::getActiveContextId(), static_cast<unsigned int>(frameBuffer)));
 
     return true;
 }

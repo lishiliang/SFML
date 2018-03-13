@@ -75,6 +75,10 @@ bool RenderWindow::setActive(bool active)
 {
     bool result = Window::setActive(active);
 
+    // Update RenderTarget tracking
+    if (result)
+        track(active);
+
     // If FBOs are available, make sure none are bound when we
     // try to draw to the default framebuffer of the RenderWindow
     if (result && priv::RenderTextureImplFBO::isAvailable())

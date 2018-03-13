@@ -383,6 +383,17 @@ protected:
     ////////////////////////////////////////////////////////////
     void initialize();
 
+    ////////////////////////////////////////////////////////////
+    /// \brief Performs the common tracking step after activating
+    ///
+    /// The derived classes must call this function after the
+    /// target is activated in order to be tracked properly
+    ///
+    /// \param active True to track, false to no longer track
+    ///
+    ////////////////////////////////////////////////////////////
+    void track(bool active);
+
 private:
 
     ////////////////////////////////////////////////////////////
